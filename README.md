@@ -7,8 +7,9 @@ A reusable agentic control plane for planning, executing, and coordinating multi
 
 ## 1. Elevator Pitch
 
-**Taskflow** is an agentic control plane that orchestrates complex, multi-step workflows using cooperating agents.  
-It provides structure, observability, and safety for autonomous execution — without sacrificing flexibility.
+**Taskflow** is an agentic control plane that orchestrates complex, multi-step workflows using cooperating agents. It provides structure, observability, and safety for autonomous execution — without sacrificing flexibility.
+
+Taskflow is designed for teams that want the benefits of agentic systems without losing the ability to debug, audit, or roll back behavior.
 
 👉 **Demo / Docs:** _Coming soon_
 👉 **Web repo:** <https://github.com/clash402/taskflow-web>
