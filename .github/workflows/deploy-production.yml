@@ -1,0 +1,134 @@
+name: Deploy Production
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prod-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: deploy-production
+    if: >
+      ${{
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'
+      }}
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      FLY_APP_NAME: ${{ vars.FLY_APP_NAME }}
+    steps:
+      - name: Checkout triggering main commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Validate required Fly.io secret
+        run: test -n "$FLY_API_TOKEN"
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Resolve Fly app slug
+        id: resolve-fly-app
+        run: |
+          if [ -n "$FLY_APP_NAME" ]; then
+            APP="$FLY_APP_NAME"
+          else
+            APP="$(sed -nE 's/^app[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' fly.toml | head -n1)"
+          fi
+
+          if [ -z "$APP" ]; then
+            echo "::error::No Fly app slug found. Set vars.FLY_APP_NAME or define app in fly.toml."
+            exit 1
+          fi
+
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+
+      - name: Validate Fly app access
+        run: |
+          APP="${{ steps.resolve-fly-app.outputs.app }}"
+          if ! flyctl status --app "$APP" >/dev/null 2>&1; then
+            echo "::error::Fly app '$APP' was not found or is not accessible by this token."
+            echo "::error::Set GitHub variable FLY_APP_NAME to your real Fly app slug or update fly.toml."
+            exit 1
+          fi
+
+      - name: Ensure required Fly volumes exist
+        env:
+          FLY_APP: ${{ steps.resolve-fly-app.outputs.app }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+
+          app = os.environ["FLY_APP"]
+          fly_toml = Path("fly.toml").read_text(encoding="utf-8")
+
+          sources = re.findall(r'^\s*source\s*=\s*"([^"]+)"\s*$', fly_toml, flags=re.MULTILINE)
+          if not sources:
+              print("No Fly volumes declared in fly.toml; skipping volume provisioning.")
+              raise SystemExit(0)
+
+          primary_region_match = re.search(
+              r'^\s*primary_region\s*=\s*"([^"]+)"\s*$',
+              fly_toml,
+              flags=re.MULTILINE,
+          )
+          primary_region = primary_region_match.group(1) if primary_region_match else ""
+
+          regions = []
+          try:
+              machines_raw = subprocess.check_output(
+                  ["flyctl", "machine", "list", "--app", app, "--json"],
+                  text=True,
+              ).strip()
+              if machines_raw:
+                  machines = json.loads(machines_raw)
+                  for machine in machines:
+                      region = machine.get("region") or machine.get("Region")
+                      if region and region not in regions:
+                          regions.append(region)
+          except Exception:
+              pass
+
+          if not regions:
+              regions = [primary_region or "iad"]
+
+          volumes_raw = subprocess.check_output(
+              ["flyctl", "volumes", "list", "--app", app, "--json"],
+              text=True,
+          ).strip()
+          volumes = json.loads(volumes_raw) if volumes_raw else []
+          existing = {
+              ((v.get("name") or v.get("Name")), (v.get("region") or v.get("Region")))
+              for v in volumes
+          }
+
+          for source in sources:
+              for region in regions:
+                  key = (source, region)
+                  if key in existing:
+                      print(f"Volume already exists: name={source} region={region}")
+                      continue
+                  print(f"Creating missing Fly volume: name={source} region={region}")
+                  subprocess.check_call(
+                      ["flyctl", "volume", "create", source, "--app", app, "-r", region, "-n", "1"]
+                  )
+          PY
+
+      - name: Deploy to Fly.io production
+        run: flyctl deploy --remote-only --config fly.toml --app "${{ steps.resolve-fly-app.outputs.app }}"

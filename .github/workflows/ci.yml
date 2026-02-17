@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  quality-and-tests:
+    name: quality-and-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build CI image
+        run: docker build --target ci -t taskflow-api:ci-${{ github.sha }} .
+
+      - name: Check formatting
+        run: |
+          docker run --rm taskflow-api:ci-${{ github.sha }} sh -lc "black --required-version 24.8.0 --check ."
+
+      - name: Lint
+        run: |
+          docker run --rm taskflow-api:ci-${{ github.sha }} sh -lc "ruff check ."
+
+      - name: Run tests
+        run: |
+          docker run --rm taskflow-api:ci-${{ github.sha }} sh -lc "pytest -q"
+
+  security-dependencies:
+    name: security-dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build CI image
+        run: docker build --target ci -t taskflow-api:ci-${{ github.sha }} .
+
+      - name: Static security scan (Bandit high severity)
+        run: |
+          docker run --rm taskflow-api:ci-${{ github.sha }} sh -lc "bandit -r . -x ./venv,./docs,./.git,./__pycache__,./.github,./tests -lll -iii"
+
+      - name: Dependency security audit
+        run: |
+          docker run --rm taskflow-api:ci-${{ github.sha }} sh -lc "pip-audit"
+
+  security-container:
+    name: security-container
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build runtime image
+        run: docker build --target runtime -t taskflow-api:runtime-${{ github.sha }} .
+
+      - name: Trivy image scan (HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: taskflow-api:runtime-${{ github.sha }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
