@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.src.core.settings import get_settings
+from src.core.settings import get_settings
 from main import app
 
 

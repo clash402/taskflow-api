@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 
-from backend.src.core.llm.provider import MockLLMProvider
+from src.core.llm.provider import MockLLMProvider
 
 
 def _wait_for_terminal(client, run_id: str, timeout_s: float = 8.0) -> dict:

@@ -1,5 +1,5 @@
-from backend.src.core.llm.router import ModelRouter, WorkloadType
-from backend.src.core.settings import Settings
+from src.core.llm.router import ModelRouter, WorkloadType
+from src.core.settings import Settings
 
 
 def test_model_router_selects_expected_models() -> None:

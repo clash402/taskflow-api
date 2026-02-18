@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import asyncio
 
-from backend.src.core.llm.cost import CostEstimator
-from backend.src.core.llm.provider import MockLLMProvider
-from backend.src.core.llm.router import ModelRouter
-from backend.src.core.settings import Settings
-from backend.src.db.engine import SQLiteEngine
-from backend.src.db.repo import Repository
-from backend.src.orchestration.executor.service import ExecutorService
+from src.core.llm.cost import CostEstimator
+from src.core.llm.provider import MockLLMProvider
+from src.core.llm.router import ModelRouter
+from src.core.settings import Settings
+from src.db.engine import SQLiteEngine
+from src.db.repo import Repository
+from src.orchestration.executor.service import ExecutorService
 
 
 def test_retry_policy_transitions_pending_then_failed(monkeypatch, tmp_path) -> None:

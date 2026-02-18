@@ -1,4 +1,4 @@
-from backend.src.orchestration.contracts.models import (
+from src.orchestration.contracts.models import (
     GenericStepOutput,
     validate_output_with_contract,
 )

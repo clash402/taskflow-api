@@ -46,6 +46,9 @@ dist/
 *.db
 *.sqlite
 *.sqlite3
+data/*.db
+data/*.db-shm
+data/*.db-wal
 
 # Jupyter Notebook
 .ipynb_checkpoints

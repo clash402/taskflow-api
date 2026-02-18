@@ -6,12 +6,12 @@ import types
 
 import pytest
 
-from backend.src.core.llm.provider import (
+from src.core.llm.provider import (
     LangChainProvider,
     ProviderConfigurationError,
     build_provider,
 )
-from backend.src.core.settings import Settings
+from src.core.settings import Settings
 
 
 def test_openai_provider_runtime_path(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -135,7 +135,7 @@ def test_provider_requires_installed_dependency(monkeypatch: pytest.MonkeyPatch)
             raise ModuleNotFoundError("No module named 'langchain_anthropic'")
         return real_import_module(name, package)
 
-    monkeypatch.setattr("backend.src.core.llm.provider.importlib.import_module", fake_import_module)
+    monkeypatch.setattr("src.core.llm.provider.importlib.import_module", fake_import_module)
 
     settings = Settings(LLM_PROVIDER="anthropic")
     with pytest.raises(ProviderConfigurationError, match="langchain_anthropic"):
