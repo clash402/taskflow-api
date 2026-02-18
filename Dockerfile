@@ -10,6 +10,7 @@ FROM base AS ci
 
 COPY pyproject.toml /app/pyproject.toml
 COPY main.py /app/main.py
+COPY src /app/src
 COPY tests /app/tests
 
 RUN python -m pip install --upgrade pip && \
@@ -19,6 +20,7 @@ FROM base AS runtime
 
 COPY pyproject.toml /app/pyproject.toml
 COPY main.py /app/main.py
+COPY src /app/src
 
 RUN python -m pip install --upgrade pip && \
     pip install .
