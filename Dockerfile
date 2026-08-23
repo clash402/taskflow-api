@@ -4,6 +4,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 FROM base AS ci
@@ -13,7 +17,7 @@ COPY main.py /app/main.py
 COPY src /app/src
 COPY tests /app/tests
 
-RUN python -m pip install --upgrade pip && \
+RUN python -m pip install --upgrade pip setuptools && \
     pip install ".[dev]"
 
 FROM base AS runtime
@@ -22,7 +26,7 @@ COPY pyproject.toml /app/pyproject.toml
 COPY main.py /app/main.py
 COPY src /app/src
 
-RUN python -m pip install --upgrade pip && \
+RUN python -m pip install --upgrade pip setuptools && \
     pip install .
 
 EXPOSE 8080
