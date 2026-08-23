@@ -8,7 +8,6 @@ from src.orchestration.contracts.models import (
     PlannerStepOutput,
 )
 
-
 OUTPUT_MODEL_REGISTRY: dict[str, type[BaseModel]] = {
     "understand_task": PlannerStepOutput,
     "execute_task": ExecutorStepOutput,

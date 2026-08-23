@@ -20,11 +20,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build CI image
-        run: docker build --target ci -t taskflow-api:ci-${{ github.sha }} .
+        run: docker build --pull --target ci -t taskflow-api:ci-${{ github.sha }} .
 
       - name: Check formatting
         run: |
-          docker run --rm taskflow-api:ci-${{ github.sha }} sh -lc "black --required-version 24.8.0 --check ."
+          docker run --rm taskflow-api:ci-${{ github.sha }} sh -lc "black --required-version 26.3.1 --check ."
 
       - name: Lint
         run: |
@@ -42,7 +42,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build CI image
-        run: docker build --target ci -t taskflow-api:ci-${{ github.sha }} .
+        run: docker build --pull --target ci -t taskflow-api:ci-${{ github.sha }} .
 
       - name: Static security scan (Bandit high severity)
         run: |
@@ -60,10 +60,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build runtime image
-        run: docker build --target runtime -t taskflow-api:runtime-${{ github.sha }} .
+        run: docker build --pull --target runtime -t taskflow-api:runtime-${{ github.sha }} .
 
       - name: Trivy image scan (HIGH/CRITICAL)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: taskflow-api:runtime-${{ github.sha }}
           format: table
