@@ -1,259 +1,95 @@
 # Taskflow
 
-**Agentic Platform & Control Plane**
-A reusable agentic control plane for planning, executing, and coordinating multi-step tasks across autonomous systems using explicit workflows, contracts, and guardrails.
+Taskflow is the control and orchestration layer of Ghost Platform. It turns a task into an explicit workflow graph, executes eligible steps under contracts and budgets, monitors progress, and reflects at controlled boundaries.
 
----
+The goal is constrained, inspectable autonomy: useful agentic behavior without hiding execution state or allowing model output to bypass system policy.
 
-## 1. Elevator Pitch
+## Current Capabilities
 
-**Taskflow** is an agentic control plane that orchestrates complex, multi-step workflows using cooperating agents. It provides structure, observability, and safety for autonomous execution — without sacrificing flexibility.
+- Create and version workflow templates with nodes, dependencies, edges, and contracts
+- Plan a run from a template or a generated graph
+- Execute eligible DAG nodes with dependency checks
+- Validate tool permission and structured output contracts
+- Retry failed steps according to policy
+- Enforce run budgets, timeouts, and maximum step counts
+- Reflect after failures, periodic boundaries, and monitor faults
+- Cancel or retry runs
+- Stream persisted and live run events over SSE
+- Persist runs, steps, events, diagnostics, templates, and cost records in SQLite
+- Route between mock, OpenAI, and Anthropic providers
+- Resume incomplete runs on startup on a best-effort basis
 
-Taskflow is designed for teams that want the benefits of agentic systems without losing the ability to debug, audit, or roll back behavior.
+## Current Scope
 
-👉 **Demo / Docs:** _Coming soon_
-👉 **Web repo:** <https://github.com/clash402/taskflow-web>
+Taskflow is a portfolio-scale control plane, not a distributed workflow service.
 
----
+- Execution uses in-process asyncio tasks.
+- SQLite is the only supported persistence backend.
+- The executor currently exposes one built-in tool contract: `llm.generate`.
+- Graph execution is controlled and inspectable, but there are no distributed workers, external queue, human approval workflow, authentication, or tenant isolation.
+- Restart recovery resumes incomplete state but does not provide exactly-once execution.
 
-## 2. What This Is
+See [docs/architecture.md](docs/architecture.md) for orchestration boundaries and failure semantics.
 
-Taskflow is **not a chatbot** and **not a generic workflow engine**.
-
-It is a **control plane** that:
-
-- Plans multi-step tasks
-- Coordinates specialized agents
-- Enforces execution contracts
-- Observes, retries, and recovers from failure
-
-Taskflow separates **decision-making**, **execution**, and **monitoring** into explicit, composable components.
-
----
-
-## 3. Why This Exists (Impact & Use Cases)
-
-As agent-based systems grow, teams encounter:
-
-- Unpredictable execution paths
-- Hidden failures
-- Tight coupling between logic and orchestration
-- Systems that are hard to reason about or evolve
-
-### Taskflow addresses this by
-
-- Making agent coordination explicit
-- Providing a shared execution substrate
-- Allowing teams to reason about workflows as systems
-
-### Example Use Cases
-
-- Data ingestion → validation → analysis → reporting
-- Multi-agent research and synthesis pipelines
-- Long-running autonomous tasks with checkpoints
-- Tool-using agents with recovery logic
-
----
-
-## 4. What This Is _Not_ (Non-Goals)
-
-Taskflow does **not**:
-
-- Replace application logic
-- Optimize for single-step agent calls
-- Hide execution state
-- Guarantee perfect autonomy
-
-It prioritizes **control, transparency, and recoverability** over raw autonomy.
-
----
-
-## 5. System Overview
-
-Taskflow is built around explicit workflow graphs:
+## Run Lifecycle
 
 ```text
-Task Request
-     ↓
-Planner Agent
-     ↓
-Workflow Graph (DAG)
-     ↓
-Executor Agents
-     ↓
-Monitor & Recovery
+Create run
+  -> plan DAG
+  -> monitor
+  -> execute next eligible step
+  -> monitor
+  -> reflect when policy requires
+  -> finish with explicit status
 ```
 
-Each node, edge, and transition is inspectable and versioned.
+Models may propose plans and generate step output. Deterministic services own contract validation, dependency eligibility, retries, budgets, timeouts, persistence, and terminal status.
 
----
+## Quick Start
 
-## 6. Example Execution Trace
+Requires Python 3.11 or later.
 
-**Task:** "Generate weekly analytics report"
-
-1. Planner decomposes task into steps
-2. Workflow DAG is constructed
-3. Data ingestion agent executes
-4. Analysis agent runs computations
-5. Report generator formats output
-6. Monitor validates completion and cost
-
-Failures trigger retries or safe exits.
-
-### A Concrete Example
-
-A representative Taskflow execution looks like this:
-
-1. A user submits a high-level request:  
-   _“Generate a weekly analytics report and notify the team.”_
-2. The planner agent decomposes the request into explicit steps.
-3. A workflow DAG is constructed with defined dependencies.
-4. Executor agents run each step (ingestion, analysis, formatting).
-5. The monitor tracks progress, cost, and execution state.
-6. Failures trigger retries, replanning, or safe termination.
-
-The result is a **transparent, inspectable execution path** rather than an opaque agent action.
-
----
-
-## 7. Safety, Guardrails & Failure Modes
-
-### Guardrails
-
-- Execution time limits
-- Step-level retries
-- Explicit failure states
-- Human override points
-
-### Known Failure Modes
-
-- Poor planning leads to inefficient DAGs
-- Tool unavailability blocks steps
-- Overly granular workflows add overhead
-
-These are surfaced and logged.
-
-### Reflection & Replanning
-
-Taskflow includes an explicit reflection step that evaluates execution progress at defined boundaries.
-
-When a step fails or produces unexpected results, the system can:
-
-- Re-evaluate the remaining workflow
-- Adjust subsequent steps
-- Exit early with a structured failure state
-
-Reflection is treated as a **controlled system behavior**, not emergent agent improvisation.
-
----
-
-## 8. Tradeoffs & Design Decisions
-
-### Key Tradeoffs
-
-- **Explicit workflows vs emergent autonomy**
-- **Centralized orchestration vs agent self-management**
-- **Predictability vs flexibility**
-
-Taskflow favors **predictable systems** over opaque behavior.
-
----
-
-## 9. Cost & Resource Controls
-
-- Per-step token accounting
-- Budget caps per workflow
-- Model selection per agent
-- Execution timeouts
-
-Costs are tracked at the workflow level.
-
-### Example Cost Trace
-
-Workflow execution includes explicit cost tracking at each step:
-
-```text
-[INFO] Workflow ID: wf_2024_09_17
-[INFO] Step: planning | tokens: 412
-[INFO] Step: data_ingestion | tokens: 188
-[INFO] Step: analysis | tokens: 903
-[INFO] Total estimated cost: $0.0286
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -e ".[dev]"
+cp .env.local.example .env.local
+./start.sh
 ```
 
-Costs are attributed at the workflow and step level to support predictable operation and debugging.
+The API runs at `http://localhost:8000`, with interactive OpenAPI documentation at `/docs`. The default mock provider supports deterministic local development.
 
----
+## API Surface
 
-## 10. Reusability & Extension Points
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /health` | Service health |
+| `GET /workflows` | List workflow templates |
+| `GET /workflows/{template_id}` | Retrieve a workflow template |
+| `POST /workflows` | Create or update a workflow template |
+| `GET /runs` | List runs |
+| `POST /runs` | Create and start a run |
+| `GET /runs/{run_id}` | Retrieve a run, graph, steps, cost, and diagnostics |
+| `POST /runs/{run_id}/cancel` | Request cancellation |
+| `POST /runs/{run_id}/retry` | Retry a run or step |
+| `GET /runs/{run_id}/events` | Stream run events with SSE |
 
-Taskflow is designed as a **platform**:
+JSON endpoints return their declared Pydantic response directly. They are not wrapped in a shared Ghost envelope. Correlation uses `X-Request-Id`.
 
-- Pluggable planner agents
-- Custom executor agents
-- Workflow templates
-- Versioned contracts
+## Quality Checks
 
-Teams can build on Taskflow without modifying core orchestration logic.
+```bash
+black --check .
+ruff check .
+pytest
+```
 
----
+Tests cover contracts, provider routing, retry policy, run lifecycle, and the API surface.
 
-## 11. Evolution Path
+## Deployment and Operations
 
-### Short-Term
+The API is containerized and configured for Fly.io. The current Fly configuration does not mount persistent storage or configure cross-origin browser access. Deployed SQLite state is therefore ephemeral across machine replacement, and a separately hosted browser client needs a same-origin proxy or CORS integration.
 
-- Richer observability
-- Improved planning heuristics
+Provider configuration, persistence, recovery behavior, guardrails, and operational gaps are documented in [docs/operations.md](docs/operations.md).
 
-### Mid-Term
-
-- Multi-workflow coordination
-- Policy-driven execution
-
-### Long-Term
-
-- Org-wide agent orchestration
-- Cross-system control planes
-
----
-
-## 12. Requirements & Building Blocks
-
-- Python 3.10+
-- LangGraph
-- FastAPI
-- LLM provider
-- Task queue / async runtime
-
----
-
-## 13. Developer Guide
-
-See `/docs` for:
-
-- Setup
-- Environment variables
-- Workflow definitions
-- API usage
-
----
-
-## 14. Principal-Level Case Study (Cross-Project)
-
-Taskflow serves as the **control plane** in a broader intelligent systems stack:
-
-- Taskflow → orchestration
-- Data Ghost → decision intelligence
-- Echo Notes → memory
-
-Together, they form a coherent platform for safe, scalable AI systems.
-
----
-
-## 15. Author & Intent
-
-Built by **Josh Courtney** to explore:
-
-- Agentic orchestration
-- Platform design for autonomy
-- Control vs flexibility in AI systems
+The web client lives in [taskflow-web](https://github.com/clash402/taskflow-web).
