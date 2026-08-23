@@ -29,6 +29,8 @@ Taskflow is a portfolio-scale control plane, not a distributed workflow service.
 - Graph execution is controlled and inspectable, but there are no distributed workers, external queue, human approval workflow, authentication, or tenant isolation.
 - Restart recovery resumes incomplete state but does not provide exactly-once execution.
 
+When side-effecting tools are introduced, they must arrive with an explicit dry-run mode that exercises orchestration and policy while suppressing external mutations. Tool-readiness and health reporting become useful only after multiple real integrations exist; neither is part of the current scope.
+
 See [docs/architecture.md](docs/architecture.md) for orchestration boundaries and failure semantics.
 
 ## Run Lifecycle
