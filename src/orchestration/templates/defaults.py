@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from src.orchestration.contracts.models import StepContract
 
-
 DEFAULT_TEMPLATE_ID = "template.default.v1"
 
 

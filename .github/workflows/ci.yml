@@ -24,7 +24,7 @@ jobs:
 
       - name: Check formatting
         run: |
-          docker run --rm taskflow-api:ci-${{ github.sha }} sh -lc "black --required-version 24.8.0 --check ."
+          docker run --rm taskflow-api:ci-${{ github.sha }} sh -lc "black --required-version 26.3.1 --check ."
 
       - name: Lint
         run: |
@@ -63,7 +63,7 @@ jobs:
         run: docker build --target runtime -t taskflow-api:runtime-${{ github.sha }} .
 
       - name: Trivy image scan (HIGH/CRITICAL)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: taskflow-api:runtime-${{ github.sha }}
           format: table
